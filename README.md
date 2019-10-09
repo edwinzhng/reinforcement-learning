@@ -13,5 +13,11 @@ Implementations of deep reinforcement learning algorithms using TensorFlow and G
 
 ## Algorithms Implemented
 
+* Deep Q Network (DQN) - ["Playing Atari with Deep Reinforcement Learning" (Minh, 2015)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
+
+## In Progress / Planned
+
 * Vanilla Policy Gradient (VPG)
-* Deep Q Network (DQN)
+* Proximal Policy Optimization (PPO)
+* Deep Deterministic Policy Gradients (DDPG)
+* Trust Region Policy Optimization (TRPO)
