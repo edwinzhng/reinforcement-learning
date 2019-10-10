@@ -11,9 +11,9 @@ class ConvolutionalNetwork:
     def build_model(self):
         input = tf.keras.Input(shape=(84, 84, 4), name='input')
         model = layers.Conv2D(filters=16, kernel_size=(8, 8),
-                              stride=4, name='conv_1', activation='relu')(input)
+                              strides=4, name='conv_1', activation='relu')(input)
         model = layers.Conv2D(filters=32, kernel_size=(4, 4),
-                              stride=2, name='conv_2', activation='relu')(model)
-        model = layers.Dense(256, activation='relu', name='fc_1')(x)
-        model = layers.Dense(self.action_space_size, activation='softmax', name='output')(x)
-        self.model = model
+                              strides=2, name='conv_2', activation='relu')(model)
+        model = layers.Dense(256, activation='relu', name='fc_1')(model)
+        output = layers.Dense(self.action_space_size, activation='softmax', name='output')(model)
+        return tf.keras.Model(inputs=input, outputs=output)

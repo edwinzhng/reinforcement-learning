@@ -14,10 +14,15 @@ Implementations of deep reinforcement learning algorithms using TensorFlow and G
 ## Algorithms Implemented
 
 * Deep Q Network (DQN) - ["Playing Atari with Deep Reinforcement Learning" (Minh, 2015)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
+* Vanilla Policy Gradient (VPG)
 
 ## In Progress / Planned
 
-* Vanilla Policy Gradient (VPG)
 * Proximal Policy Optimization (PPO)
 * Deep Deterministic Policy Gradients (DDPG)
 * Trust Region Policy Optimization (TRPO)
+* Advantage Actor Critic (A2C)
+* Asynchronous Advantage Actor Critic (A3C)
+* Generative Adversarial Imitation Learning (GAIL)
+* Parallelized DQN and PPO
+
