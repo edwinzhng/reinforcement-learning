@@ -9,11 +9,10 @@ class ReplayMemory:
         self.memory_size = memory_size
         self.memory = deque()
 
-    def add(self, observation, action, reward, terminal) -> None:
+    def add(self, state, action, reward, next_state, terminal) -> None:
         while len(self.memory) >= self.memory_size:
             self.memory.popleft()
-
-        self.memory.append((observation, action, reward, terminal))
+        self.memory.append((state, action, reward, next_state, terminal))
 
     def sample(self, batch_size: int) -> List[Tuple]:
         indices = np.random.randint(0, len(self.memory), batch_size)

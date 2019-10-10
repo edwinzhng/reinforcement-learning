@@ -10,12 +10,12 @@ class Agent(ABC):
                  name: str,
                  num_iterations: int,
                  env_name: str,
-                 has_display: bool,
-                 is_atari: bool,
+                 preprocess: bool,
+                 render_display: bool,
                  frame_skip: int):
         self.name = name
         self.num_iterations = num_iterations
-        self.env = Environment(env_name, has_display, is_atari, frame_skip)
+        self.env = Environment(env_name, preprocess, render_display, frame_skip)
 
     @abstractmethod
     def train(self):

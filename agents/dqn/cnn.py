@@ -3,13 +3,14 @@ from tensorflow.keras import layers
 
 
 class ConvolutionalNetwork:
-    def __init__(self, action_space_size):
+    def __init__(self, action_space_size: int, frame_skip: int):
         self.action_space_size = action_space_size
+        self.frame_skip = frame_skip
         self.model = self.build_model()
 
     # model from Playing Atari with Deep Reinforcement Learning (Minh, 2015)
     def build_model(self):
-        input = tf.keras.Input(shape=(84, 84, 4), name='input')
+        input = tf.keras.Input(shape=(84, 84, self.frame_skip), name='input')
         model = layers.Conv2D(filters=16, kernel_size=(8, 8),
                               strides=4, name='conv_1', activation='relu')(input)
         model = layers.Conv2D(filters=32, kernel_size=(4, 4),

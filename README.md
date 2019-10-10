@@ -11,6 +11,10 @@ Implementations of deep reinforcement learning algorithms using TensorFlow and G
 3. `source /env/bin/activate/`
 4. `pip install -r requirements.txt`
 
+## Running An Agent
+
+`python main.py --network NETWORK_NAME --env-name ENV_NAME --preprocessing PREPROCESSING_FUNCTION
+
 ## Algorithms Implemented
 
 * Deep Q Network (DQN) - ["Playing Atari with Deep Reinforcement Learning" (Minh, 2015)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
