@@ -13,7 +13,12 @@ Implementations of deep reinforcement learning algorithms using TensorFlow and G
 
 ## Running An Agent
 
-`python main.py --network NETWORK_NAME --env-name ENV_NAME --preprocessing PREPROCESSING_FUNCTION
+```
+python main.py \
+    --network NETWORK_NAME \
+    --env-name ENV_NAME \
+    --preprocessing PREPROCESSING_FUNCTION
+```
 
 ## Algorithms Implemented
 
