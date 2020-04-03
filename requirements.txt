@@ -1,4 +1,4 @@
 argparse==1.4.0
-gym[atari]==0.14.0
-opencv-python==4.1.1.26
-tensorflow==2.0.0
+gym[atari]==0.17.1
+opencv-python==4.2.0.32
+tensorflow-gpu==2.1.0
