@@ -1,4 +1,5 @@
 from collections import deque
+from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -7,22 +8,23 @@ from agents.agent import Agent
 from environments.environment import Environment
 
 
-class ConvolutionalNetwork:
-    def __init__(self, action_space_size: int, frame_skip: int):
+class ConvolutionalNetwork(tf.keras.Model):
+    def __init__(self, state_size: int, action_space_size: int, frame_skip: int):
+        super().__init__()
+        self.state_size = state_size
         self.action_space_size = action_space_size
         self.frame_skip = frame_skip
-        self.model = self.build_model()
 
     # model from Playing Atari with Deep Reinforcement Learning (Minh, 2015)
-    def build_model(self):
-        input = tf.keras.Input(shape=(84, 84, self.frame_skip), name='input')
+    def call(self, inputs):
+        input = tf.keras.Input(shape=(state_size, state_size, self.frame_skip), name='input')
         model = tf.layers.Conv2D(filters=16, kernel_size=(8, 8),
                             strides=4, name='conv_1', activation='relu')(input)
         model = tf.layers.Conv2D(filters=32, kernel_size=(4, 4),
                             strides=2, name='conv_2', activation='relu')(model)
         model = tf.layers.Dense(256, activation='relu', name='fc_1')(model)
         output = tf.layers.Dense(self.action_space_size, activation='softmax', name='output')(model)
-        return tf.keras.Model(inputs=input, outputs=output)
+        return output
 
 class ReplayMemory:
     def __init__(self, memory_size: int):
@@ -48,12 +50,18 @@ class DQN(Agent):
                  gamma: float=0.99,
                  learning_rate: float=0.001):
         super().__init__('DQN', env)
+        self.num_iterations = num_iterations
         self.replay_memory = ReplayMemory(memory_size)
         self.batch_size = batch_size
         self.gamma = tf.constant(gamma)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        self.Q = ConvolutionalNetwork(self.env.action_space_size, frame_skip)
-        self.Q.model.compile(loss='mse', optimizer=self.optimizer)
+        self.Q = ConvolutionalNetwork(self.env.state_size,
+                                      self.env.action_space_size,
+                                      frame_skip)
+        self.Q.compile(loss='mse', optimizer=self.optimizer)
+
+    def predict_action(self, state):
+        self.Q.predict(state)
 
     def train(self):
         steps = 0
@@ -89,6 +97,7 @@ class DQN(Agent):
 
         grads = tape.gradient(loss_value, self.Q.model.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.Q.model.trainable_variables))
+        return loss_value
 
     @tf.function
     def loss(self, reward, target):

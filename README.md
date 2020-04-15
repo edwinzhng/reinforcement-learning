@@ -8,7 +8,7 @@ Install [Anaconda](https://www.anaconda.com/distribution) for Python 3.7
 
 Create an Anaconda environment
  ```
- conda create -n rl
+ conda create -n rl python=3.7
  ```
 
 Activate the Anaconda environment
@@ -23,8 +23,10 @@ pip install -r requirements.txt
 
 ## Running An Agent
 
+Available network names: `DQN`, `A2C`, `PPO`
+
 ```
-python main.py \
+python src/main.py \
     --network NETWORK_NAME \
     --env-name ENV_NAME
 ```

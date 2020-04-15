@@ -8,21 +8,22 @@ class Environment:
     def __init__(self,
                  env_name: str,
                  preprocess: str,
-                 render: bool=False,
-                 frame_skip=4):
+                 render: bool,
+                 frame_skip: int):
         self.env = gym.make(env_name)
         self.frame_skip = frame_skip
-        self.render = render
+        self.should_render = render
+        self.state_size = len(self.env.observation_space.sample())
         self.action_space_size = self.env.action_space.n
         self.preprocess = self.preprocess_default
         if preprocess == 'atari':
             self.preprocess = self.preprocess_atari
 
-    # Reset environment return observation
+    # Reset environment and return observation
     def reset(self):
         observation = self.env.reset()
-        self.render()
         observation = self.preprocess(observation)
+        self.render()
         return self.stack_frames([observation] * self.frame_skip)
 
     # Take one step in the environment based on given action
@@ -56,9 +57,10 @@ class Environment:
 
     # Stack multiple frames if skip_frames is set
     def stack_frames(self, images):
+        print("images: ", images)
         return np.stack(images, axis=3).astype('float32')
 
     # Helper function to render display if the setting is turned on
     def render(self) -> None:
-        if self.render:
+        if self.should_render:
             self.env.render()
