@@ -98,8 +98,8 @@ class DQN(Agent):
                 if step % self.target_update_steps == 0:
                     self.Q_target.set_weights(self.Q.get_weights())
 
-            mlflow.log_metric("Reward", total_reward, step=episode)
-            print(f"Episode: {episode} Reward: {total_reward}")
+            mlflow.log_metric('Reward', total_reward, step=episode)
+            print(f'Episode: {episode} Reward: {total_reward}')
         mlflow.end_run()
 
     def gradient_descent(self):

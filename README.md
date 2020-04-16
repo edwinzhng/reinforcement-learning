@@ -1,6 +1,6 @@
 # Reinforcement Learning
 
-Implementations of deep reinforcement learning algorithms using PyTorch and OpenAI Gym.
+Implementations of deep reinforcement learning algorithms using Tensorflow 2.0 and OpenAI Gym.
 
 ## Setup
 
@@ -30,6 +30,10 @@ python src/main.py \
     --network NETWORK_NAME \
     --env-name ENV_NAME
 ```
+
+To render the OpenAI Gym environment, set the `--render` flag.
+
+To enable GPUs for training, set the `--gpu` flag.
 
 ## Algorithms Implemented
 
