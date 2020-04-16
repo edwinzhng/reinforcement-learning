@@ -6,7 +6,7 @@ from environments.environment import Environment
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reinforcement learning algorithm implementations")
-    parser.add_argument("-a", "--agent", type=str, choices=['DQN', 'A2C', 'PPO'],
+    parser.add_argument("-a", "--agent", type=str, choices=['DQN', 'DDQN', 'A2C', 'PPO'],
                         help="The agent to be used", required=True)
     parser.add_argument("-e", "--env", type=str,
                         help="The environment name", required=True)

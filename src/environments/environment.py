@@ -21,9 +21,9 @@ class Environment:
         if action is None:
             action = self.random_action()
 
-        observation, reward, terminal, info = self.env.step(action)
+        observation, reward, done, info = self.env.step(action)
         self.render()
-        return observation, reward, terminal, info
+        return observation, reward, done, info
 
     # Randomly sample action from environment
     def random_action(self):

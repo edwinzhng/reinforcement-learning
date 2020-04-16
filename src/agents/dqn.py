@@ -1,99 +1,129 @@
+import random
 from collections import deque
-from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import Model, losses, optimizers
 
+import mlflow
 from agents.agent import Agent
-from environments.environment import Environment
 
 
-class DQNModel(tf.keras.Model):
-    def __init__(self, state_size: int, action_space_size: int):
+# Function approximator for the Q value in DQN
+class QModel(tf.keras.Model):
+    def __init__(self,
+                 state_size: int,
+                 action_space_size: int,
+                 num_layers: int = 2,
+                 hidden_units: int = 64):
         super().__init__()
         self.state_size = state_size
         self.action_space_size = action_space_size
+        self.input_layer = tf.keras.layers.InputLayer((self.state_size,), name='input')
+        self.hidden_layers = []
+        for i in range(num_layers):
+            self.hidden_layers.append(tf.keras.layers.Dense(
+                hidden_units, activation='relu', name=f'hidden_layer_{i}'))
+        self.output_layer = tf.keras.layers.Dense(self.action_space_size,
+                                                  name='output')
 
+    @tf.function
     def call(self, inputs):
-        input = tf.keras.Input(shape=(self.state_size,), name='input')
-        x = tf.keras.layers.Dense(256, activation='relu', name='fc_1')(input)
-        x = tf.keras.layers.Dense(256, activation='relu', name='fc_2')(x)
-        x = tf.keras.layers.Dense(256, activation='relu', name='fc_3')(x)
-        output = tf.keras.layers.Dense(self.action_space_size,
-                                       activation='softmax',
-                                       name='output')(x)
+        x = self.input_layer(inputs)
+        for layer in self.hidden_layers:
+            x = layer(x)
+        output = self.output_layer(x)
         return output
-
-class ReplayMemory:
-    def __init__(self, memory_size: int):
-        self.memory_size = memory_size
-        self.memory = deque()
-
-    def add(self, state, action, reward, next_state, terminal) -> None:
-        while len(self.memory) >= self.memory_size:
-            self.memory.popleft()
-        self.memory.append((state, action, reward, next_state, terminal))
-
-    def sample(self, batch_size: int) -> List[Tuple]:
-        indices = np.random.randint(0, len(self.memory), batch_size)
-        return [self.memory[i] for i in indices]
 
 class DQN(Agent):
     def __init__(self,
-                 env: Environment,
-                 num_iterations: int=10e8,
-                 memory_size: int=10e7,
-                 batch_size: int=32,
-                 gamma: float=0.99,
-                 learning_rate: float=0.001):
+                 env,
+                 lr=0.001,
+                 gamma=0.99,
+                 batch_size=64,
+                 target_update_steps=25,
+                 num_episodes=500,
+                 memory_size=2000):
         super().__init__('DQN', env)
-        self.num_iterations = num_iterations
-        self.replay_memory = ReplayMemory(memory_size)
+        self.gamma = gamma
         self.batch_size = batch_size
-        self.gamma = tf.constant(gamma)
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        self.Q = DQNModel(self.env.state_size, self.env.action_space_size)
-        self.Q.compile(loss='mse', optimizer=self.optimizer)
+        self.target_update_steps = target_update_steps
+        self.num_episodes = num_episodes
+        self.replay_memory = deque(maxlen=memory_size)
 
-    def predict_action(self, state):
-        self.Q.predict(state)
+        # Initialize main and target model
+        self.Q = QModel(self.env.state_size, self.env.action_space_size)
+        self.Q_target = QModel(self.env.state_size, self.env.action_space_size)
+        self.optimizer = optimizers.Adam(lr=lr)
+
+    # Predict action with random probability of epsilon
+    def predict_action(self, state, epsilon):
+        if np.random.rand() <= epsilon:
+            return self.env.random_action()
+        else:
+            q = self.Q(tf.convert_to_tensor([state], dtype=tf.float32))[0]
+            return np.argmax(q)
 
     def train(self):
-        steps = 0
-        while steps < self.num_iterations:
+        episode = 0
+        step = 0
+        
+        # Start experiment metric tracking
+        mlflow.start_run()
+        while episode < self.num_episodes:
+            
+
+            # Reset environment for new episode
             state = self.env.reset()
-            epsilon = max(0.1, 1 - steps / 1e7)
+            total_reward = 0
+            done = False
+            epsilon = 1 / (episode * 0.1 + 1)
+            episode += 1
 
-            terminal = False
-            while not terminal:
-                if np.random.random() < epsilon:
-                    action = self.env.random_action()
-                else:
-                    action = self.predict_action(state)
+            while not done:
+                # Take action based on current state and append to replay memory
+                action = self.predict_action(state, epsilon)
+                next_state, reward, done, info = self.env.step(action)
+                self.replay_memory.append((state, action, reward, next_state, done))
 
-                next_state, reward, terminal, info = self.env.step(action)
-                self.replay_memory.add(state, action, reward, next_state, terminal)
+                step += 1
                 state = next_state
+                total_reward += reward
 
-                replay_sample = self.replay_memory.sample(self.batch_size)
-                for state, action, reward, next_state, terminal in replay_sample:
-                    self.gradient_descent(state, action, reward, next_state, terminal)
-                steps += 1
+                if len(self.replay_memory) < self.batch_size:
+                    continue
 
-    @tf.function
-    def gradient_descent(self, state, action, reward, next_state, terminal):
-        tf.dtypes.cast(reward, tf.float32)
+                # Update network weights and target network
+                self.gradient_descent()
+                if step % self.target_update_steps == 0:
+                    self.Q_target.set_weights(self.Q.get_weights())
+
+            mlflow.log_metric("Reward", total_reward, step=episode)
+            print(f"Episode: {episode} Reward: {total_reward}")
+        mlflow.end_run()
+
+    def gradient_descent(self):
+        # Sample batch from replay memory
+        replay_samples = random.sample(self.replay_memory, self.batch_size)
+        states = tf.convert_to_tensor([x[0] for x in replay_samples], dtype=tf.float32)
+        actions = tf.convert_to_tensor([x[1] for x in replay_samples], dtype=tf.int32)
+        rewards = tf.convert_to_tensor([x[2] for x in replay_samples], dtype=tf.float32)
+        next_states = tf.convert_to_tensor([x[3] for x in replay_samples], dtype=tf.float32)
+        dones = tf.convert_to_tensor([x[4] for x in replay_samples], dtype=tf.float32)
+
+        # Compute gradients
         with tf.GradientTape() as tape:
-            target = self.Q(state)
-            if not terminal:
-                next_action = self.predict_action(next_state)
-                reward += self.gamma * tf.cast(tf.argmax(next_action), tf.float32)
-            loss_value = self.loss(reward, target)
+            # Calculate y as action-value estimate
+            y_q = self.Q_target(tf.concat(next_states, axis=0))
+            next_action = tf.argmax(y_q, axis=1)
+            y = tf.reduce_sum(tf.one_hot(next_action, self.env.action_space_size) * y_q, axis=1)
+            y = rewards + (1 - dones) * self.gamma * y
 
-        grads = tape.gradient(loss_value, self.Q.trainable_variables)
+            # Calculate target value for loss
+            target_q = self.Q(tf.concat(states, axis=0))
+            target = tf.reduce_sum(tf.one_hot(actions, self.env.action_space_size) * target_q, axis=1)
+
+            loss = tf.reduce_mean(tf.square(y - target))
+
+        grads = tape.gradient(loss, self.Q.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.Q.trainable_variables))
-        return loss_value
-
-    @tf.function
-    def loss(self, reward, target):
-        return tf.reduce_mean(tf.square(reward - target))
