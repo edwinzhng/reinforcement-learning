@@ -1,4 +1,5 @@
-# MLFlow
+# Logs
+logs/*.log
 mlruns/
 
 # Byte-compiled / optimized / DLL files

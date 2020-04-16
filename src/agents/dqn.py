@@ -3,29 +3,25 @@ from collections import deque
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import Model, losses, optimizers
+from tensorflow.keras import Model, optimizers
 
-import mlflow
 from agents.agent import Agent
 
 
 # Function approximator for the Q value in DQN
 class QModel(tf.keras.Model):
     def __init__(self,
-                 state_size: int,
-                 action_space_size: int,
-                 num_layers: int = 2,
-                 hidden_units: int = 64):
+                 state_size,
+                 action_space_size,
+                 num_layers = 3,
+                 hidden_units = 128):
         super().__init__()
-        self.state_size = state_size
-        self.action_space_size = action_space_size
-        self.input_layer = tf.keras.layers.InputLayer((self.state_size,), name='input')
+        self.input_layer = tf.keras.layers.InputLayer((state_size,), name='input')
         self.hidden_layers = []
         for i in range(num_layers):
             self.hidden_layers.append(tf.keras.layers.Dense(
                 hidden_units, activation='relu', name=f'hidden_layer_{i}'))
-        self.output_layer = tf.keras.layers.Dense(self.action_space_size,
-                                                  name='output')
+        self.output_layer = tf.keras.layers.Dense(action_space_size, name='output')
 
     @tf.function
     def call(self, inputs):
@@ -39,13 +35,13 @@ class DQN(Agent):
     def __init__(self,
                  env,
                  lr=0.001,
-                 gamma=0.99,
+                 discount=0.99,
                  batch_size=64,
                  target_update_steps=25,
-                 num_episodes=500,
+                 num_episodes=3000,
                  memory_size=2000):
         super().__init__('DQN', env)
-        self.gamma = gamma
+        self.discount = discount
         self.batch_size = batch_size
         self.target_update_steps = target_update_steps
         self.num_episodes = num_episodes
@@ -54,7 +50,7 @@ class DQN(Agent):
         # Initialize main and target model
         self.Q = QModel(self.env.state_size, self.env.action_space_size)
         self.Q_target = QModel(self.env.state_size, self.env.action_space_size)
-        self.optimizer = optimizers.Adam(lr=lr)
+        self.optimizer = tf.keras.optimizers.Adam(lr=lr)
 
     # Predict action with random probability of epsilon
     def predict_action(self, state, epsilon):
@@ -67,12 +63,8 @@ class DQN(Agent):
     def train(self):
         episode = 0
         step = 0
-        
-        # Start experiment metric tracking
-        mlflow.start_run()
-        while episode < self.num_episodes:
-            
 
+        while episode < self.num_episodes:
             # Reset environment for new episode
             state = self.env.reset()
             total_reward = 0
@@ -86,23 +78,21 @@ class DQN(Agent):
                 next_state, reward, done, info = self.env.step(action)
                 self.replay_memory.append((state, action, reward, next_state, done))
 
+                # Update variables
                 step += 1
                 state = next_state
                 total_reward += reward
 
+                # Continue if not enough samples yet
                 if len(self.replay_memory) < self.batch_size:
                     continue
 
                 # Update network weights and target network
-                self.gradient_descent()
-                if step % self.target_update_steps == 0:
-                    self.Q_target.set_weights(self.Q.get_weights())
+                self.update_weights(step)
 
-            mlflow.log_metric('Reward', total_reward, step=episode)
             print(f'Episode: {episode} Reward: {total_reward}')
-        mlflow.end_run()
 
-    def gradient_descent(self):
+    def update_weights(self, step):
         # Sample batch from replay memory
         replay_samples = random.sample(self.replay_memory, self.batch_size)
         states = tf.convert_to_tensor([x[0] for x in replay_samples], dtype=tf.float32)
@@ -117,7 +107,7 @@ class DQN(Agent):
             y_q = self.Q_target(tf.concat(next_states, axis=0))
             next_action = tf.argmax(y_q, axis=1)
             y = tf.reduce_sum(tf.one_hot(next_action, self.env.action_space_size) * y_q, axis=1)
-            y = rewards + (1 - dones) * self.gamma * y
+            y = rewards + (1 - dones) * self.discount * y
 
             # Calculate target value for loss
             target_q = self.Q(tf.concat(states, axis=0))
@@ -127,3 +117,7 @@ class DQN(Agent):
 
         grads = tape.gradient(loss, self.Q.trainable_variables)
         self.optimizer.apply_gradients(zip(grads, self.Q.trainable_variables))
+
+        # Copy weights from main network to target network
+        if step % self.target_update_steps == 0:
+            self.Q_target.set_weights(self.Q.get_weights())
