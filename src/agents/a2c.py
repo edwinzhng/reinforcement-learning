@@ -38,12 +38,11 @@ class CriticModel(tf.keras.Model):
 
 class A2C(Agent):
     def __init__(self, env, config):
-        super().__init__('A2C', env)
+        super().__init__(self, env)
         self.discount = config['discount']
         self.entropy = config['entropy']
-        self.max_steps = config['max_steps']
+        self.update_steps = config['update_steps']
         self.num_episodes = config['num_episodes']
-        self.normalize_advantage = config['normalize_advantage']
 
         self.actor = ActorModel(self.env.state_size, self.env.action_space_size,
                                 config['num_layers'], config['hidden_units'])
@@ -56,91 +55,91 @@ class A2C(Agent):
         action = tf.squeeze(tf.random.categorical(policy, 1), axis=-1)
         return np.array(action)[0]
 
+    # Compute advantage and target values
+    def advantage(self, reward, next_state, done, value):
+        if done:
+            target = reward
+        else:
+            next_value = self.critic(tf.convert_to_tensor([next_state]))
+            target = reward + self.discount * next_value
+
+        advantage = target - value
+        return advantage, target
+
     def train(self):
-        episode = 0
-        step = 0
-        total_reward = 0
-        state = self.env.reset()
-        done = False
+        for episode in range(1, self.num_episodes + 1):
+            state = self.env.reset()
+            total_reward = 0
+            done = False
 
-        while episode < self.num_episodes:
-            samples = []
-            start_step = step
-
-            while step - start_step < self.max_steps:
+            states = []
+            actions = []
+            advantages = []
+            targets= []
+            while not done:
                 action = self.predict_action(state)
                 next_state, reward, done, info = self.env.step(action)
-                samples.append((state, action, reward, next_state, done))
 
-                state = next_state
+                value = self.critic(tf.convert_to_tensor([state]))
+                advantage, target = self.advantage(reward * 0.01, next_state, done, value)
+
+                states.append(np.expand_dims(state, 0))
+                actions.append(np.expand_dims(action, 0))
+                advantages.append(advantage)
+                targets.append(target)
+
                 total_reward += reward
-                step += 1
+                state = next_state
 
-                if done:
-                    print(f'Episode: {episode} Reward: {total_reward}')
-                    episode += 1
-                    total_reward = 0
-                    state = self.env.reset()
-                    break
+                if len(states) >= self.update_steps or done:
+                    states = np.vstack(states)
+                    actions = np.vstack(actions)
+                    advantages = np.vstack(advantages)
+                    targets = np.vstack(targets)
 
-            self.gradient_descent(samples)
+                    self.update_actor(states, actions, advantages)
+                    self.update_critic(states, targets)
 
-    def gradient_descent(self, samples):
-        states = [s[0] for s in samples]
-        actions = [s[1] for s in samples]
-        rewards = [s[2] for s in samples]
-        next_states = [s[3] for s in samples]
-        dones = [s[4] for s in samples]
+                    states = []
+                    actions = []
+                    advantages = []
+                    targets = []
 
-        # Update Actor gradients
+            print(f'Episode: {episode} Reward: {total_reward}')
+
+    # Update actor weights based on loss
+    def update_actor(self, states, actions, advantages):
+        tf.stop_gradient(advantages)
+        actions = tf.cast(actions, tf.int32)
+
         with tf.GradientTape() as tape:
-            advantages = self.advantages(states, rewards, dones)
-            actor_loss = self.actor_loss(states, actions, advantages)
-        actor_grads = tape.gradient(actor_loss, self.actor.trainable_variables)
-        self.optimizer.apply_gradients(zip(actor_grads, self.actor.trainable_variables))
+            policy = self.actor(states)
+            loss = self.actor_loss(policy, actions, advantages)
 
-        # Update Critic gradients
+        grads = tape.gradient(loss, self.actor.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.actor.trainable_variables))
+
+    # Update critic weights based on loss
+    def update_critic(self, states, targets):
+        targets = tf.stop_gradient(targets)
         with tf.GradientTape() as tape:
-            advantages = self.advantages(states, rewards, dones)
-            critic_loss = self.critic_loss(advantages)
-        critic_grads = tape.gradient(critic_loss, self.critic.trainable_variables)
-        self.optimizer.apply_gradients(zip(critic_grads, self.critic.trainable_variables))
+            values = self.critic(states)
+            loss = self.critic_loss(values, targets)
 
-    # Compute advantage based on reward values
-    def advantages(self, states, rewards, dones):
-        # Initialize reward sum based on last state
-        last_state = states[-1]
-        if dones[-1]:
-            R = 0
-        else:
-            R = self.critic(tf.convert_to_tensor(np.expand_dims(last_state, axis=0), dtype=tf.float32))
+        grads = tape.gradient(loss, self.critic.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.critic.trainable_variables))
 
-        # Compute discounted rewards using discount value and running sum R
-        discounted_rewards = []
-        for reward in reversed(rewards):
-            R = reward + self.discount * R
-            discounted_rewards.append(R)
-        discounted_rewards.reverse()
+    # Actor loss based on sparse categorical crossentropy
+    def actor_loss(self, policy, actions, advantages):
+        ce_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        loss = ce_loss(actions, policy, sample_weight=advantages)
 
-        # Compute advantages by subtracting discounted reward from values
-        values = self.critic(tf.convert_to_tensor(np.vstack(states), dtype=tf.float32))
-        advantages = discounted_rewards - values
-        if self.normalize_advantage:
-            advantages = (advantages - tf.math.reduce_mean(advantages) / (tf.math.reduce_std(advantages) + 1e-8))
-        return advantages
-
-    # Compute total loss from policy
-    def actor_loss(self, states, actions, advantages):
-        policy = self.actor(tf.convert_to_tensor(np.vstack(states), dtype=tf.float32))
-        crossentropy_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-        loss = crossentropy_loss(actions, policy)
-        loss = tf.reduce_mean(loss * np.array(advantages))
-
-        # Add entropy term to actor loss
+        # Add entropy
         entropy_term = tf.keras.losses.categorical_crossentropy(policy, policy, from_logits=False)
-        loss = loss - (self.entropy * entropy_term)
+        loss -= self.entropy * entropy_term
         return loss
 
-    # Compute total loss from values
-    def critic_loss(self, advantages):
-        return tf.reduce_mean(tf.square(advantages))
+    # Mean squared error for critic value loss
+    def critic_loss(self, values, targets):
+        mse = tf.keras.losses.MeanSquaredError()
+        return mse(values, targets)

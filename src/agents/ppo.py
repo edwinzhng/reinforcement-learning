@@ -43,7 +43,7 @@ class PPO(Agent):
         self.lmbda = config['lmbda']
         self.clip_ratio = config['clip_ratio']
         self.epochs = config['epochs']
-        self.update_interval = config['update_interval']
+        self.update_steps = config['update_steps']
         self.num_episodes = config['num_episodes']
 
         self.actor = ActorModel(self.env.state_size, self.env.action_space_size,
@@ -86,22 +86,26 @@ class PPO(Agent):
             actions = []
             rewards = []
             old_policies = []
-
             while not done:
                 policy, action = self.predict_policy_action(state)
-                next_state, reward, done, info = self.env.step(action)
+                next_state, reward, done, _ = self.env.step(action)
 
-                states.append([state])
-                actions.append([action])
-                rewards.append([reward * 0.01])
-                old_policies.append([policy])
+                states.append(np.expand_dims(state, 0))
+                actions.append(np.expand_dims(action, 0))
+                # Scale reward to optimize frequency over value
+                rewards.append(np.expand_dims(reward * 0.01, 0))
+                old_policies.append(policy)
 
-                if len(states) >= self.update_interval or done:
+                total_reward += reward
+                state = next_state
+
+                if len(states) >= self.update_steps or done:
                     states = np.vstack(states)
                     actions = np.vstack(actions)
                     rewards = np.vstack(rewards)
                     old_policies = np.vstack(old_policies)
 
+                    # Compute values and advantages for loss
                     values = self.critic(tf.convert_to_tensor(states))
                     next_values = self.critic(tf.convert_to_tensor([next_state]))
                     gae, targets = self.advantage(rewards, values, next_values, done)
@@ -113,9 +117,6 @@ class PPO(Agent):
                     actions = []
                     rewards = []
                     old_policies = []
-
-                total_reward += reward
-                state = next_state
 
             print(f'Episode: {episode} Reward: {total_reward}')
 

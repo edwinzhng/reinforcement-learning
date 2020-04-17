@@ -2,26 +2,23 @@ CartPole-v1:
   lr: 0.001
   discount: 0.99
   entropy: 0.0
-  max_steps: 40000
+  update_steps: 5
   num_episodes: 3000
   num_layers: 3
   hidden_units: 32
-  normalize_advantage: false
 Acrobot-v1:
   lr: 0.001
   discount: 0.99
   entropy: 0.0
-  max_steps: 40000
+  update_steps: 5
   num_episodes: 3000
   num_layers: 3
   hidden_units: 32
-  normalize_advantage: true
 MountainCar-v0:
   lr: 0.001
   discount: 0.99
   entropy: 0.01
-  max_steps: 60000
+  update_steps: 32
   num_episodes: 3000
   num_layers: 3
   hidden_units: 32
-  normalize_advantage: true

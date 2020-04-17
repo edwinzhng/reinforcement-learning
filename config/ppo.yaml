@@ -4,9 +4,9 @@ CartPole-v1:
   lmbda: 0.95
   clip_ratio: 0.1
   epochs: 3
-  update_interval: 5
+  update_steps: 8
   num_episodes: 3000
-  num_layers: 3
+  num_layers: 2
   hidden_units: 32
 Acrobot-v1:
   lr: 0.001
@@ -14,7 +14,7 @@ Acrobot-v1:
   lmbda: 0.95
   clip_ratio: 0.1
   epochs: 3
-  update_interval: 5
+  update_steps: 5
   num_episodes: 3000
   num_layers: 3
   hidden_units: 32
@@ -24,7 +24,7 @@ MountainCar-v0:
   lmbda: 0.95
   clip_ratio: 0.1
   epochs: 3
-  update_interval: 5
+  update_steps: 5
   num_episodes: 3000
   num_layers: 3
   hidden_units: 32
