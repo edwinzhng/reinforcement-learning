@@ -2,12 +2,15 @@ import argparse
 import os
 
 import pkg_resources
+import tensorflow as tf
 import yaml
 
 from agents.a2c import A2C
 from agents.dqn import DQN
 from agents.ppo import PPO
 from environments.environment import Environment
+
+tf.keras.backend.set_floatx('float64')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Reinforcement learning algorithm implementations')
@@ -39,7 +42,7 @@ if __name__ == '__main__':
     elif args.agent == 'A2C':
         model = A2C(env, config)
     elif args.agent == 'PPO':
-        model = PPO(env)
+        model = PPO(env, config)
 
     # Train model
     model.train()

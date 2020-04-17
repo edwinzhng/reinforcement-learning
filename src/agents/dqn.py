@@ -14,13 +14,12 @@ class QModel(tf.keras.Model):
                  action_space_size,
                  num_layers,
                  hidden_units):
-        super().__init__()
-        self.input_layer = tf.keras.layers.InputLayer((state_size,), name='input')
+        super(QModel, self).__init__()
+        self.input_layer = tf.keras.layers.InputLayer((state_size,))
         self.hidden_layers = []
-        for i in range(num_layers):
-            self.hidden_layers.append(tf.keras.layers.Dense(
-                hidden_units, activation='relu', name=f'hidden_layer_{i}'))
-        self.output_layer = tf.keras.layers.Dense(action_space_size, name='output')
+        for _ in range(num_layers):
+            self.hidden_layers.append(tf.keras.layers.Dense(hidden_units, activation='relu'))
+        self.output_layer = tf.keras.layers.Dense(action_space_size)
 
     def call(self, inputs):
         x = self.input_layer(inputs)
@@ -32,9 +31,6 @@ class QModel(tf.keras.Model):
 class DQN(Agent):
     def __init__(self, env, config):
         super().__init__('DQN', env)
-        if env.continuous:
-            raise RuntimeError('DQN cannot run on continuous action spaces.')
-
         self.discount = config['discount']
         self.batch_size = config['batch_size']
         self.target_update_steps = config['target_update_steps']
@@ -59,16 +55,13 @@ class DQN(Agent):
             return np.argmax(q)
 
     def train(self):
-        episode = 0
         step = 0
-
-        while episode < self.num_episodes:
+        for episode in range(1, self.num_episodes + 1):
             # Reset environment for new episode
             state = self.env.reset()
             total_reward = 0
             done = False
             epsilon = self.epsilon * (self.epsilon_decay ** episode)
-            episode += 1
 
             while not done:
                 # Take action based on current state and append to replay memory
