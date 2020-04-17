@@ -6,7 +6,7 @@ from agents.agent import Agent
 
 
 class ContinuousActorModel(tf.keras.Model):
-    def __init__(self, state_size, num_layers = 3, hidden_units = 128):
+    def __init__(self, state_size, num_layers, hidden_units):
         super().__init__()
         self.input_layer = tf.keras.layers.InputLayer((state_size,), name='input')
         self.hidden_layers = []
@@ -29,7 +29,7 @@ class ContinuousActorModel(tf.keras.Model):
         return policy
 
 class DiscreteActorModel(tf.keras.Model):
-    def __init__(self, state_size, action_space_size, num_layers = 3, hidden_units = 128):
+    def __init__(self, state_size, action_space_size, num_layers, hidden_units):
         super().__init__()
         self.input_layer = tf.keras.layers.InputLayer((state_size,), name='input')
         self.hidden_layers = []
@@ -50,10 +50,7 @@ class DiscreteActorModel(tf.keras.Model):
         return policy
 
 class CriticModel(tf.keras.Model):
-    def __init__(self,
-                 state_size,
-                 num_layers = 2,
-                 hidden_units = 64):
+    def __init__(self, state_size, num_layers, hidden_units):
         super().__init__()
         self.input_layer = tf.keras.layers.InputLayer((state_size,), name='input')
         self.hidden_layers = []
@@ -72,25 +69,22 @@ class CriticModel(tf.keras.Model):
         return value
 
 class A2C(Agent):
-    def __init__(self,
-                 env,
-                 lr=3e-4,
-                 discount=0.99,
-                 entropy=0.01,
-                 max_steps=5,
-                 num_episodes=3000):
+    def __init__(self, env, config):
         super().__init__('A2C', env)
-        self.discount = discount
-        self.entropy = entropy
-        self.max_steps = max_steps
-        self.num_episodes = num_episodes
+        self.discount = config['discount']
+        self.entropy = config['entropy']
+        self.max_steps = config['max_steps']
+        self.num_episodes = config['num_episodes']
 
         if self.env.continuous:
-            self.actor = ContinuousActorModel(self.env.state_size)
+            self.actor = ContinuousActorModel(self.env.state_size,
+                                              config['num_layers'],
+                                              config['hidden_units'])
         else:
-            self.actor = DiscreteActorModel(self.env.state_size, self.env.action_space_size)
-        self.critic = CriticModel(self.env.state_size)
-        self.optimizer = tf.keras.optimizers.Adam(lr=lr)
+            self.actor = DiscreteActorModel(self.env.state_size, self.env.action_space_size,
+                                            config['num_layers'], config['hidden_units'])
+        self.critic = CriticModel(self.env.state_size, config['num_layers'], config['hidden_units'])
+        self.optimizer = tf.keras.optimizers.Adam(lr=config['lr'])
 
     # Predict action using categorical probability distribution based on policy
     def predict_action(self, state):

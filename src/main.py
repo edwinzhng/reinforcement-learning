@@ -1,10 +1,13 @@
 import argparse
 import os
 
+import pkg_resources
+import yaml
+
 from agents.a2c import A2C
 from agents.dqn import DQN
+from agents.ppo import PPO
 from environments.environment import Environment
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Reinforcement learning algorithm implementations')
@@ -23,14 +26,20 @@ if __name__ == '__main__':
     # Build environment
     env = Environment(args.env, args.render, args.normalize)
 
+    # Load config
+    with open(pkg_resources.resource_filename(__name__,
+        f'../config/{args.agent.lower()}.yaml')) as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
+        config = config[args.env]
+
     # Build model
     model = None
     if args.agent == 'DQN':
-        model = DQN(env)
+        model = DQN(env, config)
     elif args.agent == 'A2C':
-        model = A2C(env)
+        model = A2C(env, config)
     elif args.agent == 'PPO':
-        model = None
+        model = PPO(env)
 
     # Train model
     model.train()

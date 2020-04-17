@@ -12,8 +12,8 @@ class QModel(tf.keras.Model):
     def __init__(self,
                  state_size,
                  action_space_size,
-                 num_layers = 3,
-                 hidden_units = 128):
+                 num_layers,
+                 hidden_units):
         super().__init__()
         self.input_layer = tf.keras.layers.InputLayer((state_size,), name='input')
         self.hidden_layers = []
@@ -30,28 +30,25 @@ class QModel(tf.keras.Model):
         return output
 
 class DQN(Agent):
-    def __init__(self,
-                 env,
-                 lr=0.001,
-                 discount=0.99,
-                 batch_size=64,
-                 target_update_steps=25,
-                 num_episodes=3000,
-                 memory_size=2000):
+    def __init__(self, env, config):
         super().__init__('DQN', env)
         if env.continuous:
             raise RuntimeError('DQN cannot run on continuous action spaces.')
 
-        self.discount = discount
-        self.batch_size = batch_size
-        self.target_update_steps = target_update_steps
-        self.num_episodes = num_episodes
-        self.replay_memory = deque(maxlen=memory_size)
+        self.discount = config['discount']
+        self.batch_size = config['batch_size']
+        self.target_update_steps = config['target_update_steps']
+        self.num_episodes = config['num_episodes']
+        self.epsilon = config['epsilon']
+        self.epsilon_decay = config['epsilon_decay']
+        self.replay_memory = deque(maxlen=config['memory_size'])
 
         # Initialize main and target model
-        self.Q = QModel(self.env.state_size, self.env.action_space_size)
-        self.Q_target = QModel(self.env.state_size, self.env.action_space_size)
-        self.optimizer = tf.keras.optimizers.Adam(lr=lr)
+        self.Q = QModel(self.env.state_size, self.env.action_space_size,
+                        config['num_layers'], config['hidden_units'])
+        self.Q_target = QModel(self.env.state_size, self.env.action_space_size,
+                        config['num_layers'], config['hidden_units'])
+        self.optimizer = tf.keras.optimizers.Adam(lr=config['lr'])
 
     # Predict action with random probability of epsilon
     def predict_action(self, state, epsilon):
@@ -70,7 +67,7 @@ class DQN(Agent):
             state = self.env.reset()
             total_reward = 0
             done = False
-            epsilon = 1 / (episode * 0.1 + 1)
+            epsilon = self.epsilon * (self.epsilon_decay ** episode)
             episode += 1
 
             while not done:
