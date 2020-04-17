@@ -77,7 +77,7 @@ class A2C(Agent):
                  lr=3e-4,
                  discount=0.99,
                  entropy=0.01,
-                 max_steps=128,
+                 max_steps=5,
                  num_episodes=3000):
         super().__init__('A2C', env)
         self.discount = discount
@@ -158,7 +158,7 @@ class A2C(Agent):
                 loss = tf.math.log(gaussian.prob(actions))
 
                 # Entropy term for continuous action spaces from the A3C paper
-                entropy = -0.5 * (tf.math.log(2 * np.pi * tf.math.square(sigma)) + 1)
+                entropy = gaussian.entropy()
             else:
                 # Sparse categorical crossentropy if action space is discrete
                 crossentropy_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)

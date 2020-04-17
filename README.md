@@ -44,5 +44,6 @@ To enable GPUs for training, set the `--gpu` flag.
 ## Resources & Code Used
 
 * [Overview of actor-critic methods and A2C](https://towardsdatascience.com/understanding-actor-critic-methods-931b97b6df3f)
-* [PyTorch DQN Tutorial](https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
+* [PyTorch DQN tutorial](https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
 * [OpenAI Baselines](https://github.com/openai/baselines)
+* [Actor-critic methods and input normalization](https://medium.com/@asteinbach/actor-critic-using-deep-rl-continuous-mountain-car-in-tensorflow-4c1fb2110f7c)

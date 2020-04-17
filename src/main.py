@@ -14,13 +14,14 @@ if __name__ == '__main__':
                         help='The environment name', required=True)
     parser.add_argument('-r', '--render', help='Render game on screen', action='store_true')
     parser.add_argument('-g', '--gpu', help='Use GPU for training', action='store_true')
+    parser.add_argument('-n', '--normalize', help='Normalize inputs', action='store_true')
     args = parser.parse_args()
 
     if not args.gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     # Build environment
-    env = Environment(args.env, args.render)
+    env = Environment(args.env, args.render, args.normalize)
 
     # Build model
     model = None

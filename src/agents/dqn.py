@@ -22,7 +22,6 @@ class QModel(tf.keras.Model):
                 hidden_units, activation='relu', name=f'hidden_layer_{i}'))
         self.output_layer = tf.keras.layers.Dense(action_space_size, name='output')
 
-    @tf.function
     def call(self, inputs):
         x = self.input_layer(inputs)
         for layer in self.hidden_layers:
