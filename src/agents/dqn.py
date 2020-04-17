@@ -3,7 +3,6 @@ from collections import deque
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import Model, optimizers
 
 from agents.agent import Agent
 
@@ -41,6 +40,9 @@ class DQN(Agent):
                  num_episodes=3000,
                  memory_size=2000):
         super().__init__('DQN', env)
+        if env.continuous:
+            raise RuntimeError('DQN cannot run on continuous action spaces.')
+
         self.discount = discount
         self.batch_size = batch_size
         self.target_update_steps = target_update_steps

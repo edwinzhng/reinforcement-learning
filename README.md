@@ -40,3 +40,9 @@ To enable GPUs for training, set the `--gpu` flag.
 * Deep Q Network (DQN) - ["Playing Atari with Deep Reinforcement Learning" (Mnih, 2015)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) and ["Human-level Control Through Deep Reinforcement Learning" (Mnih, 2015)](https://www.nature.com/articles/nature14236)
 * Advantage Actor Critic (A2C) - ["Asynchronous Methods for Deep Reinforcement Learning" (Mnih, 2016)](https://arxiv.org/abs/1602.01783)
 * Proximal Policy Optimization (PPO) - ["Proximal Policy Optimization Algorithms" (Schulman, 2017)](https://arxiv.org/abs/1707.06347)
+
+## Resources & Code Used
+
+* [Overview of actor-critic methods and A2C](https://towardsdatascience.com/understanding-actor-critic-methods-931b97b6df3f)
+* [PyTorch DQN Tutorial](https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
+* [OpenAI Baselines](https://github.com/openai/baselines)

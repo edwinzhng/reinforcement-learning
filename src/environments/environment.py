@@ -8,7 +8,18 @@ class Environment:
         self.env = gym.make(env_name)
         self.should_render = render
         self.state_size = len(self.env.observation_space.sample())
-        self.action_space_size = self.env.action_space.n
+
+        self.continuous = False
+        self.action_space_size = None
+        self.action_space_low = None
+        self.action_space_high = None
+
+        if type(self.env.action_space) == gym.spaces.Discrete:
+            self.action_space_size = self.env.action_space.n
+        else:
+            self.continuous = True
+            self.action_space_low = self.env.action_space.low[0]
+            self.action_space_high = self.env.action_space.high[0]
 
     # Reset environment and return observation
     def reset(self):

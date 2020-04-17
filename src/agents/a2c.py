@@ -1,39 +1,57 @@
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from agents.agent import Agent
 
 
-class ActorModel(tf.keras.Model):
-    def __init__(self,
-                 state_size,
-                 action_space_size,
-                 num_layers = 2,
-                 hidden_units = 64):
+class ContinuousActorModel(tf.keras.Model):
+    def __init__(self, state_size, num_layers = 3, hidden_units = 128):
         super().__init__()
         self.input_layer = tf.keras.layers.InputLayer((state_size,), name='input')
         self.hidden_layers = []
         for i in range(num_layers):
             self.hidden_layers.append(tf.keras.layers.Dense(
                 hidden_units, activation='relu', name=f'hidden_layer_{i}'))
-        self.actor = tf.keras.layers.Dense(hidden_units, activation='relu')
-        self.policy = tf.keras.layers.Dense(action_space_size,
-                                            activation='softmax',
-                                            name='policy')
 
-    @tf.function
+        # Continuous action space policy heads for mean and standard deviation
+        # Parameterized from original A3C paper
+        self.mean = tf.keras.layers.Dense(1, activation='relu', name='mean')
+        self.stddev = tf.keras.layers.Dense(1, activation='softplus', name='stddev')
+
     def call(self, inputs):
         x = self.input_layer(inputs)
         for layer in self.hidden_layers:
             x = layer(x)
-        actor = self.actor(x)
-        policy = self.policy(actor)
+        mean = self.mean(x)
+        stddev = self.stddev(x) + 1e-5
+        policy = tf.squeeze(tf.concat([[mean], [stddev]], axis=0))
+        return policy
+
+class DiscreteActorModel(tf.keras.Model):
+    def __init__(self, state_size, action_space_size, num_layers = 3, hidden_units = 128):
+        super().__init__()
+        self.input_layer = tf.keras.layers.InputLayer((state_size,), name='input')
+        self.hidden_layers = []
+        for i in range(num_layers):
+            self.hidden_layers.append(tf.keras.layers.Dense(
+                hidden_units, activation='relu', name=f'hidden_layer_{i}'))
+
+        # Discrete action space policy
+        self.policy = tf.keras.layers.Dense(action_space_size,
+                                            activation='softmax',
+                                            name='policy')
+
+    def call(self, inputs):
+        x = self.input_layer(inputs)
+        for layer in self.hidden_layers:
+            x = layer(x)
+        policy = self.policy(x)
         return policy
 
 class CriticModel(tf.keras.Model):
     def __init__(self,
                  state_size,
-                 action_space_size,
                  num_layers = 2,
                  hidden_units = 64):
         super().__init__()
@@ -45,7 +63,6 @@ class CriticModel(tf.keras.Model):
         self.critic = tf.keras.layers.Dense(hidden_units, activation='relu')
         self.value = tf.keras.layers.Dense(1, name='value')
 
-    @tf.function
     def call(self, inputs):
         x = self.input_layer(inputs)
         for layer in self.hidden_layers:
@@ -60,7 +77,7 @@ class A2C(Agent):
                  lr=3e-4,
                  discount=0.99,
                  entropy=0.01,
-                 max_steps=512,
+                 max_steps=128,
                  num_episodes=3000):
         super().__init__('A2C', env)
         self.discount = discount
@@ -68,15 +85,30 @@ class A2C(Agent):
         self.max_steps = max_steps
         self.num_episodes = num_episodes
 
-        self.actor = ActorModel(self.env.state_size, self.env.action_space_size)
-        self.critic = CriticModel(self.env.state_size, self.env.action_space_size)
+        if self.env.continuous:
+            self.actor = ContinuousActorModel(self.env.state_size)
+        else:
+            self.actor = DiscreteActorModel(self.env.state_size, self.env.action_space_size)
+        self.critic = CriticModel(self.env.state_size)
         self.optimizer = tf.keras.optimizers.Adam(lr=lr)
 
     # Predict action using categorical probability distribution based on policy
     def predict_action(self, state):
-        policy = self.actor(tf.convert_to_tensor([state], dtype=tf.float32))
-        action = tf.squeeze(tf.random.categorical(policy, 1), axis=-1)
-        return np.array(action)[0]
+        policy = self.actor(tf.convert_to_tensor(np.array([state]), dtype=tf.float32))
+        if self.env.continuous:
+            # Sample from continuous action space if action is continuous
+            mu, sigma = np.array(policy)
+            gaussian = tfp.distributions.Normal(mu, sigma)
+            action = tf.squeeze(gaussian.sample(1), axis=0)
+            action = tf.clip_by_value(action + 1e-5,
+                                      self.env.action_space_low,
+                                      self.env.action_space_high)
+            action = np.array([action])
+        else:
+            # Otherwise choose an action from the discrete space
+            action = tf.squeeze(tf.random.categorical(policy, 1), axis=-1)
+            action = np.array(action)[0]
+        return action
 
     def train(self):
         episode = 0
@@ -105,26 +137,46 @@ class A2C(Agent):
                     state = self.env.reset()
                     break
 
-            self.gradient_descent(samples)
+            self.update_weights(samples)
 
-    def gradient_descent(self, samples):
+    def update_weights(self, samples):
         states = [s[0] for s in samples]
         actions = [s[1] for s in samples]
         rewards = [s[2] for s in samples]
         next_states = [s[3] for s in samples]
         dones = [s[4] for s in samples]
 
-        # Update Actor gradients
+        # Update Actor weights with entropy
         with tf.GradientTape() as tape:
             advantages = self.advantages(states, rewards, dones)
-            actor_loss = self.actor_loss(states, actions, advantages)
+            policy = self.actor(tf.convert_to_tensor(np.vstack(states), dtype=tf.float32))
+            tape.watch(policy)
+            if self.env.continuous:
+                # Negative log loss if action space is continuous
+                mu, sigma = policy
+                gaussian = tfp.distributions.Normal(mu, sigma)
+                loss = tf.math.log(gaussian.prob(actions))
+
+                # Entropy term for continuous action spaces from the A3C paper
+                entropy = -0.5 * (tf.math.log(2 * np.pi * tf.math.square(sigma)) + 1)
+            else:
+                # Sparse categorical crossentropy if action space is discrete
+                crossentropy_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+                loss = crossentropy_loss(actions, policy)
+
+                # Entropy from categorical crossentropy
+                entropy = tf.keras.losses.categorical_crossentropy(policy, policy, from_logits=False)
+
+            loss = tf.reduce_mean(loss * advantages)
+            actor_loss = loss - (self.entropy * tf.cast(entropy, tf.float32))
+
         actor_grads = tape.gradient(actor_loss, self.actor.trainable_variables)
         self.optimizer.apply_gradients(zip(actor_grads, self.actor.trainable_variables))
 
-        # Update Critic gradients
+        # Update Critic weights
         with tf.GradientTape() as tape:
             advantages = self.advantages(states, rewards, dones)
-            critic_loss = self.critic_loss(advantages)
+            critic_loss = tf.reduce_mean(tf.square(advantages))
         critic_grads = tape.gradient(critic_loss, self.critic.trainable_variables)
         self.optimizer.apply_gradients(zip(critic_grads, self.critic.trainable_variables))
 
@@ -135,7 +187,7 @@ class A2C(Agent):
         if dones[-1]:
             R = 0
         else:
-            R = self.critic(tf.convert_to_tensor(last_state[None, :], dtype=tf.float32))
+            R = self.critic(tf.convert_to_tensor(np.expand_dims(last_state, axis=0), dtype=tf.float32))
 
         # Compute discounted rewards using discount value and running sum R
         discounted_rewards = []
@@ -148,19 +200,3 @@ class A2C(Agent):
         values = self.critic(tf.convert_to_tensor(np.vstack(states), dtype=tf.float32))
         advantages = discounted_rewards - values
         return advantages
-
-    # Compute total loss from policy
-    def actor_loss(self, states, actions, advantages):
-        policy = self.actor(tf.convert_to_tensor(np.vstack(states), dtype=tf.float32))
-        crossentropy_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-        loss = crossentropy_loss(actions, policy)
-        loss = tf.reduce_mean(loss * np.array(advantages))
-
-        # Add entropy term to actor loss
-        entropy_term = tf.keras.losses.categorical_crossentropy(policy, policy, from_logits=False)
-        loss - (self.entropy * entropy_term)
-        return loss
-
-    # Compute total loss from values
-    def critic_loss(self, advantages):
-        return tf.reduce_mean(tf.square(advantages))
