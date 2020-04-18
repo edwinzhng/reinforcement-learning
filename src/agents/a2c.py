@@ -51,8 +51,8 @@ class A2C(Agent):
     # Predict action using categorical probability distribution based on policy
     def predict_action(self, state):
         policy = self.actor(tf.convert_to_tensor([state], dtype=tf.float32))
-        action = tf.squeeze(tf.random.categorical(policy, 1), axis=-1)
-        return np.array(action)[0]
+        action = np.random.choice(self.env.action_space_size, p=policy[0])
+        return policy, action
 
     # Compute advantage and target values
     def advantage(self, reward, next_state, done, value):

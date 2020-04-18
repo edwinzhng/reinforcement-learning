@@ -21,7 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--render', help='Render game on screen', action='store_true')
     parser.add_argument('--gpu', help='Use GPU for training', action='store_true')
     parser.add_argument('--normalize', help='Normalize inputs', action='store_true')
-    parser.add_argument('--episodes', help='Number of episodes', type=int, default=3000, required=False)
+    parser.add_argument('--episodes', help='Number of episodes', type=int, default=1000, required=False)
     args = parser.parse_args()
 
     if not args.gpu:
