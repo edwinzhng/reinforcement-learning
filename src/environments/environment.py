@@ -13,18 +13,7 @@ class Environment:
         self.should_render = render
         self.normalize = normalize
         self.state_size = len(self.env.observation_space.sample())
-
-        self.continuous = False
-        self.action_space_size = None
-        self.action_space_low = None
-        self.action_space_high = None
-
-        if type(self.env.action_space) == gym.spaces.Discrete:
-            self.action_space_size = self.env.action_space.n
-        else:
-            self.continuous = True
-            self.action_space_low = self.env.action_space.low[0]
-            self.action_space_high = self.env.action_space.high[0]
+        self.action_space_size = self.env.action_space.n
 
         # Sample observation space to scale inputs
         observation_samples = [self.env.observation_space.sample() for _ in range(10000)]
@@ -39,7 +28,7 @@ class Environment:
 
     # Take one step in the environment based on given action
     def step(self, action: int = None):
-        if action is None:
+        if action is None or action >= self.action_space_size:
             action = self.random_action()
 
         state, reward, done, info = self.env.step(action)
