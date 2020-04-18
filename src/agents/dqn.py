@@ -34,7 +34,6 @@ class DQN(Agent):
         self.discount = config['discount']
         self.batch_size = config['batch_size']
         self.target_update_steps = config['target_update_steps']
-        self.num_episodes = config['num_episodes']
         self.epsilon = config['epsilon']
         self.epsilon_decay = config['epsilon_decay']
         self.replay_memory = deque(maxlen=config['memory_size'])
@@ -54,9 +53,10 @@ class DQN(Agent):
             q = self.Q(tf.convert_to_tensor([state], dtype=tf.float32))[0]
             return np.argmax(q)
 
-    def train(self):
+    def train(self, num_episodes):
+        episode_rewards = []
         step = 0
-        for episode in range(1, self.num_episodes + 1):
+        for episode in range(num_episodes):
             # Reset environment for new episode
             state = self.env.reset()
             total_reward = 0
@@ -81,7 +81,9 @@ class DQN(Agent):
                 # Update network weights and target network
                 self.update_weights(step)
 
-            print(f'Episode: {episode} Reward: {total_reward}')
+            episode_rewards.append(total_reward)
+            print(f'Episode: {episode + 1} Reward: {total_reward}')
+        return episode_rewards
 
     def update_weights(self, step):
         # Sample batch from replay memory

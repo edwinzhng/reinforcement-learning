@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 
 import pkg_resources
@@ -10,7 +11,6 @@ from agents.dqn import DQN
 from agents.ppo import PPO
 from environments.environment import Environment
 
-tf.keras.backend.set_floatx('float64')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Reinforcement learning algorithm implementations')
@@ -18,9 +18,10 @@ if __name__ == '__main__':
                         help='The agent to be used', required=True)
     parser.add_argument('-e', '--env', type=str,
                         help='The environment name', required=True)
-    parser.add_argument('-r', '--render', help='Render game on screen', action='store_true')
-    parser.add_argument('-g', '--gpu', help='Use GPU for training', action='store_true')
-    parser.add_argument('-n', '--normalize', help='Normalize inputs', action='store_true')
+    parser.add_argument('--render', help='Render game on screen', action='store_true')
+    parser.add_argument('--gpu', help='Use GPU for training', action='store_true')
+    parser.add_argument('--normalize', help='Normalize inputs', action='store_true')
+    parser.add_argument('--episodes', help='Number of episodes', type=int, default=3000, required=False)
     args = parser.parse_args()
 
     if not args.gpu:
@@ -31,7 +32,7 @@ if __name__ == '__main__':
 
     # Load config
     with open(pkg_resources.resource_filename(__name__,
-        f'../config/{args.agent.lower()}.yaml')) as file:
+        f'config/{args.agent.lower()}.yaml')) as file:
         config = yaml.load(file, Loader=yaml.FullLoader)
         config = config[args.env]
 
@@ -45,4 +46,15 @@ if __name__ == '__main__':
         model = PPO(env, config)
 
     # Train model
-    model.train()
+    rewards = model.train(args.episodes)
+
+    # Save rewards per episode to CSV file
+    log_file = pkg_resources.resource_filename(
+        __name__, f'logs/{args.agent}_{args.env}.csv')
+
+    with open(log_file, 'w', newline='') as csvfile:
+        fieldnames = ['episode', 'reward']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for episode, reward in enumerate(rewards):
+            writer.writerow({'episode': episode + 1, 'reward': reward})

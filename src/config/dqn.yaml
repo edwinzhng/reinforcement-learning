@@ -3,7 +3,6 @@ CartPole-v1:
   discount: 0.99
   batch_size: 64
   target_update_steps: 25
-  num_episodes: 3000
   memory_size: 50000
   epsilon: 0.1
   epsilon_decay: 0.995
@@ -14,7 +13,6 @@ Acrobot-v1:
   discount: 0.99
   batch_size: 64
   target_update_steps: 25
-  num_episodes: 3000
   memory_size: 50000
   epsilon: 0.1
   epsilon_decay: 0.995
@@ -25,20 +23,8 @@ MountainCar-v0:
   discount: 0.99
   batch_size: 64
   target_update_steps: 25
-  num_episodes: 3000
   memory_size: 50000
   epsilon: 0.1
   epsilon_decay: 1
   num_layers: 3
   hidden_units: 256
-LunarLander-v2:
-  lr: 0.001
-  discount: 0.99
-  batch_size: 64
-  target_update_steps: 25
-  num_episodes: 3000
-  memory_size: 50000
-  epsilon: 0.1
-  epsilon_decay: 0.995
-  num_layers: 3
-  hidden_units: 512

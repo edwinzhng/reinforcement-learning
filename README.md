@@ -23,27 +23,27 @@ pip install -r requirements.txt
 
 ## Running An Agent
 
-Available network names: `DQN`, `A2C`, `PPO`
-
 ```
-python src/main.py \
-    --network NETWORK_NAME \
-    --env-name ENV_NAME
+python src/main.py --agent NETWORK_NAME --env ENV_NAME
 ```
 
-To render the OpenAI Gym environment, set the `--render` flag.
+- Available agents: `DQN`, `A2C`, `PPO`
+- Supported environments: `CartPole-v1`, `Acrobot-v1`, `MountainCar-v0`
+- Render the OpenAI Gym environment with `--render`
+- Enable GPUs for training with `--gpu`
+- Normalize environment observations with `--normalization`
+- Set number of training episodes with `--episodes`
 
-To enable GPUs for training, set the `--gpu` flag.
+
+## References & Code Used
+
+- [Overview of actor-critic methods and A2C](https://towardsdatascience.com/understanding-actor-critic-methods-931b97b6df3f)
+- [PyTorch DQN tutorial](https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
+- [OpenAI Baselines for implementation reference](https://github.com/openai/baselines)
+- [Tensorflow 2 implementations of reinforcement learning algorithms](https://github.com/marload/deep-rl-tf2)
 
 ## Algorithms Implemented
 
-* Deep Q Network (DQN) - ["Playing Atari with Deep Reinforcement Learning" (Mnih, 2015)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) and ["Human-level Control Through Deep Reinforcement Learning" (Mnih, 2015)](https://www.nature.com/articles/nature14236)
-* Advantage Actor Critic (A2C) - ["Asynchronous Methods for Deep Reinforcement Learning" (Mnih, 2016)](https://arxiv.org/abs/1602.01783)
-* Proximal Policy Optimization (PPO) - ["Proximal Policy Optimization Algorithms" (Schulman, 2017)](https://arxiv.org/abs/1707.06347)
-
-## Resources & Code Used
-
-* [Overview of actor-critic methods and A2C](https://towardsdatascience.com/understanding-actor-critic-methods-931b97b6df3f)
-* [PyTorch DQN tutorial](https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
-* [OpenAI Baselines for implementation reference](https://github.com/openai/baselines)
-* [Tensorflow 2 implementations of reinforcement learning algorithms](https://github.com/marload/deep-rl-tf2)
+- Deep Q Network (DQN) - ["Playing Atari with Deep Reinforcement Learning" (Mnih, 2015)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) and ["Human-level Control Through Deep Reinforcement Learning" (Mnih, 2015)](https://www.nature.com/articles/nature14236)
+- Advantage Actor Critic (A2C) - ["Asynchronous Methods for Deep Reinforcement Learning" (Mnih, 2016)](https://arxiv.org/abs/1602.01783)
+- Proximal Policy Optimization (PPO) - ["Proximal Policy Optimization Algorithms" (Schulman, 2017)](https://arxiv.org/abs/1707.06347)

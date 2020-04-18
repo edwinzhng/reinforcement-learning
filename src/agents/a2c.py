@@ -42,7 +42,6 @@ class A2C(Agent):
         self.discount = config['discount']
         self.entropy = config['entropy']
         self.update_steps = config['update_steps']
-        self.num_episodes = config['num_episodes']
 
         self.actor = ActorModel(self.env.state_size, self.env.action_space_size,
                                 config['num_layers'], config['hidden_units'])
@@ -66,8 +65,9 @@ class A2C(Agent):
         advantage = target - value
         return advantage, target
 
-    def train(self):
-        for episode in range(1, self.num_episodes + 1):
+    def train(self, num_episodes):
+        episode_rewards = []
+        for episode in range(num_episodes):
             state = self.env.reset()
             total_reward = 0
             done = False
@@ -105,7 +105,10 @@ class A2C(Agent):
                     advantages = []
                     targets = []
 
-            print(f'Episode: {episode} Reward: {total_reward}')
+            episode_rewards.append(total_reward)
+            print(f'Episode: {episode + 1} Reward: {total_reward}')
+
+        return episode_rewards
 
     # Update actor weights based on loss
     def update_actor(self, states, actions, advantages):

@@ -1,0 +1,21 @@
+CartPole-v1:
+  lr: 0.001
+  discount: 0.99
+  entropy: 0.0
+  update_steps: 5
+  num_layers: 2
+  hidden_units: 32
+Acrobot-v1:
+  lr: 0.001
+  discount: 0.99
+  entropy: 0.0
+  update_steps: 5
+  num_layers: 2
+  hidden_units: 32
+MountainCar-v0:
+  lr: 0.001
+  discount: 0.99
+  entropy: 0.01
+  update_steps: 32
+  num_layers: 2
+  hidden_units: 32

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 import tensorflow as tf
 
@@ -11,5 +12,5 @@ class Agent(ABC):
         self.env = env
 
     @abstractmethod
-    def train(self):
+    def train(self, num_episodes: int) -> List[float]:
         pass
