@@ -7,9 +7,9 @@ Implementations of deep reinforcement learning algorithms using Tensorflow 2.0 a
 Install [Anaconda](https://www.anaconda.com/distribution) for Python 3.7
 
 Create an Anaconda environment
- ```
- conda create -n rl python=3.7
- ```
+```
+conda create -n rl python=3.7
+```
 
 Activate the Anaconda environment
 ```

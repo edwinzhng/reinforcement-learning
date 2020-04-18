@@ -27,6 +27,9 @@ if __name__ == '__main__':
     if not args.gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+    if args.agent != 'DQN':
+        tf.keras.backend.set_floatx('float64')
+
     # Build environment
     env = Environment(args.env, args.render, args.normalize)
 

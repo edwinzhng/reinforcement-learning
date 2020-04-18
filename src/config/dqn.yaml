@@ -7,7 +7,7 @@ CartPole-v1:
   epsilon: 0.1
   epsilon_decay: 0.995
   num_layers: 3
-  hidden_units: 512
+  hidden_units: 256
 Acrobot-v1:
   lr: 0.001
   discount: 0.99
@@ -17,7 +17,7 @@ Acrobot-v1:
   epsilon: 0.1
   epsilon_decay: 0.995
   num_layers: 3
-  hidden_units: 512
+  hidden_units: 256
 MountainCar-v0:
   lr: 0.001
   discount: 0.99
